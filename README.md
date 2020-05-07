@@ -15,16 +15,46 @@ The inclusion of this auxiliary model allows this model to generate text compara
 **1. Prerequisites**
 This project relies on PyTorch, nltk (with punkt and perceptron taggers), and tqdm:
 
-  pip install torch==1.5.0 nltk==3.4.5 tqdm==4.45.0
+```
+pip install torch==1.5.0 nltk==3.4.5 tqdm==4.45.0
 
-  >> nltk.download('punkt')
-  >> nltk.download('averaged_perceptron_tagger')
+>> nltk.download('punkt')
+>> nltk.download('averaged_perceptron_tagger')
+```
 
 **2. Training**
 
 You can then run `sequence_prediction.py` to train the text generation and POS models on given data. Included are models pretrained on a number of works from L. Frank Baum.
 
+```
+usage: sequence_prediction.py [-h] [--path PATH] [--wordpath WORDPATH]
+                              [--pospath POSPATH]
+                              [--pos-constraint {weighted,strict,none}]
+                              [--sentence SENTENCE]
+                              {train,train-word,train-pos,gen}
+
+Using POS tagging to help decode a language model
+
+positional arguments:
+  {train,train-word,train-pos,gen}
+                        whether to train (all, word model, pos modoel) or just
+                        load everything for evaluation
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --path PATH           filepath of textfile/directory to load data from. if
+                        path is a directory, all files in the directory will
+                        be parsed.
+  --wordpath WORDPATH   path for an existing word model file
+  --pospath POSPATH     path for an existing pos model file
+  --pos-constraint {weighted,strict,none}
+                        type of POS constraining to use in decoding
+  --sentence SENTENCE   initial sentence or phrase with which we will seed our
+                        example language generation
+```
+
 **3. Generation**
+
 Trained models can then be used to generate sentences.
 
 
