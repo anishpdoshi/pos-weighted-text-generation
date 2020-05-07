@@ -3,72 +3,74 @@ import nltk
 import collections
 import itertools
 from nltk import pos_tag
-from nltk.tokenize import sent_tokenize, word_tokenize # punkt tokenizers
+from nltk.tokenize import sent_tokenize, word_tokenize
 
-AUTHORS = {
-    'nietzsche': {
-        'MIN_PARAGRAPH_LENGTH': 200
-    },
-    'lfrankbaum': {
-        'MIN_PARAGRAPH_LENGTH': 0
-    }
-}
 EOS = '<EOS>'
 EOP = '<EOP>'
 
-def load_paragraphs(author, work= None):
-    assert author in list(AUTHORS.keys())
-
-    results = {}
-    directory = './datasets/' + author
-    for filename in os.listdir(directory):
-        name = filename.split('.txt')[0]
-        if work and name != work:
-            continue
-        with open(os.path.abspath(os.path.join(directory, filename)), 'r') as f:
-            raw_content = f.read()
-            # Strip out intro data
-            begin_index = raw_content.find('START OF')
-            end_index = raw_content.find('END OF')
-            content = raw_content[begin_index:end_index]
-            paragraphs = list(
-                map(
-                    lambda par: par.replace('\n', ' '), 
-                    filter(
-                        lambda par: len(par) > AUTHORS[author]['MIN_PARAGRAPH_LENGTH'],
-                        content.split('\n\n')
-                    )
+def load_from_author(author, work=None):
+    def gut_to_paragraphs(content):
+        return list(
+            map(
+                lambda par: par.replace('\n', ' '), 
+                filter(
+                    # Remove empties
+                    lambda par: len(par) > 0,
+                    content.split('\n\n')
                 )
             )
-            print('Loaded {}: {} paragraphs'.format(filename, len(paragraphs)))
-            if work:
-                return paragraphs
+        )
+    if work is None:
+        path = os.path.join('./datasets', author)
+    else:
+        path = os.path.join('./datasets', author, work)
+    return load_paragraphs(path, to_paragraphs=gut_to_paragraphs)
 
-            results[name] = paragraphs
+def load_paragraphs(path, to_paragraphs=lambda content: content.split('\n')):
     
-    return results
+    def process_individual_file(filepath):
+        with open(os.path.abspath(filepath, 'r')) as f:
+            content = f.read()
+            return to_paragraphs(content)
+
+    if os.path.isdir(path):
+        results = []
+        num_files = 0
+        for filepath in os.listdir(path):
+            if os.path.isfile(filepath):
+                name = filepath.split('.txt')[0]
+                results.extend(process_individual_file(filepath))
+                num_files += 1
+        print('Loaded {} paragraphs from {} files in {}'.format(len(results), num_files, path))
+        return results
+    else:
+        paragraphs = process_individual_file(path)
+        print('Loaded {} paragraphs from {}'.format(len(paragraphs), filename))
+        return paragraphs
+
 
 def clean_word(word):
     return word.strip().lower().replace('_', '')
 
-def paragraphs_as_token_stream(paragraphs):
-    # TODO - make this actually a 'stream' (generator) lol
-    stream = []
+def paragraphs_as_tokens(paragraphs):
+    tokens = []
     for paragraph in paragraphs:
         sentences = nltk.tokenize.sent_tokenize(paragraph)
         for sentence in sentences:
             words = nltk.tokenize.word_tokenize(sentence)
             pos_tags = nltk.pos_tag(words)
-            stream.extend((clean_word(word), pos_tag[1]) for word, pos_tag in zip(words, pos_tags))
-            stream.append((EOS, 'EOS'))
+            tokens.extend((clean_word(word), pos_tag[1]) for word, pos_tag in zip(words, pos_tags))
+            tokens.append((EOS, 'EOS'))
 
-        stream.append((EOP, 'EOP'))
-    return stream
+        tokens.append((EOP, 'EOP'))
+    return tokens
 
-def reduced_text(author, work = None):
-    paragraphs = load_paragraphs(author, work)
-    if isinstance(paragraphs, dict):
-        paragraphs = itertools.chain.from_iterable(paragraphs.values())
+def reduced_text(path=None):
+    if not path:
+        paragraphs = load_from_author('lfrankbaum')
+    else:
+        # SPECIFY A CUSTOM LOAD FUNC HERE
+        paragraphs = load_paragraphs(path)
     return paragraphs_as_token_stream(paragraphs)
 
 def to_sentence(words):
@@ -90,5 +92,5 @@ def to_sentence(words):
     return sent
 
 if __name__ == '__main__':
-    results = reduced_text('nietzsche')
+    results = reduced_text('nietzsche')[:100]
 
